@@ -1,7 +1,7 @@
 <!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 html,body{margin:0;width:100vw;height:100%;background:#000;display:flex;justify-content:center;align-items:center}
-textarea{width:70%;height:70%;background:#000;color:#00ff00;font:6.5px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none}
+textarea{width:33%;height:70%;background:#000;color:#00ff00;font:6.4px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none}
 textarea::-webkit-scrollbar{display:none;}
 </style>
 </head>
@@ -64,6 +64,28 @@ t.addEventListener('keydown', e=>{
         t.setRangeText("    ");
         t.selectionStart=t.selectionEnd=p+4;
         localStorage.setItem("content", localStorage.getItem("content"));
+    }
+});
+t.addEventListener('keydown', e => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+
+        const v = t.value;
+        const p = t.selectionStart;
+
+        // Find the start of the current line
+        const start = v.lastIndexOf("\n", p - 1) + 1;
+
+        // Extract leading spaces from this line
+        const indentMatch = v.slice(start, p).match(/^[ ]*/);
+        const indent = indentMatch ? indentMatch[0] : "";
+
+        // Insert newline + same indentation
+        const insert = "\n" + indent;
+        t.setRangeText(insert, p, p, "end");
+
+        // Save localStorage if you use persistence
+        localStorage.setItem("content", t.value);
     }
 });
 </script>
