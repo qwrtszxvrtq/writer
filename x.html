@@ -62,19 +62,11 @@ t.addEventListener('keydown', e => {
 
         const v = t.value;
         const p = t.selectionStart;
-
-        // Find the start of the current line
         const start = v.lastIndexOf("\n", p - 1) + 1;
-
-        // Extract leading spaces from this line
         const indentMatch = v.slice(start, p).match(/^[ ]*/);
         const indent = indentMatch ? indentMatch[0] : "";
-
-        // Insert newline + same indentation
         const insert = "\n" + indent;
         t.setRangeText(insert, p, p, "end");
-
-        // Save localStorage if you use persistence
         localStorage.setItem("content", t.value);
     }
 });
