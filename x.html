@@ -1,0 +1,25 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+html,body{margin:0;width:100vw;height:100%;background:#000;display:flex;justify-content:center;align-items:center}
+textarea{width:70%;height:70%;background:#000;color:#00ff00;font:8px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none}textarea::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+<textarea id="t" spellcheck="false"></textarea>
+<script>
+const t=document.getElementById('t');
+t.value=localStorage.getItem('content')||"";
+t.focus();
+t.oninput=()=>{localStorage.setItem('content',t.value);};
+t.addEventListener('keydown', e => {
+    if (e.key === "Tab") {
+        e.preventDefault();
+        const p = t.selectionStart;
+        t.setRangeText("    ");
+        t.selectionStart = t.selectionEnd = p + 2;
+        localStorage.setItem('content', t.value);
+    }
+});
+</script>
+</body>
+</html>
