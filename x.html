@@ -1,23 +1,69 @@
 <!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 html,body{margin:0;width:100vw;height:100%;background:#000;display:flex;justify-content:center;align-items:center}
-textarea{width:70%;height:70%;background:#000;color:#00ff00;font:6.5px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none}textarea::-webkit-scrollbar{display:none;}
+textarea{width:70%;height:70%;background:#000;color:#00ff00;font:6.5px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none}
+textarea::-webkit-scrollbar{display:none;}
 </style>
 </head>
 <body>
 <textarea id="t" spellcheck="false"></textarea>
 <script>
-const t=document.getElementById('t');
-t.value=localStorage.getItem('content')||"";
-t.focus();
-t.oninput=()=>{localStorage.setItem('content',t.value);};
-t.addEventListener('keydown', e => {
-    if (e.key === "Tab") {
+// ======== AUTO-KEY AES-GCM ENCRYPTION (NO PASSWORD) ========
+const enc = new TextEncoder(), dec = new TextDecoder();
+
+// Generate or restore a permanent random key
+async function getKey(){
+    let raw = localStorage.getItem("autoEncKey");
+    if(!raw){
+        raw = crypto.getRandomValues(new Uint8Array(32));
+        localStorage.setItem("autoEncKey", btoa(String.fromCharCode(...raw)));
+    } else {
+        raw = Uint8Array.from(atob(raw), c=>c.charCodeAt(0));
+    }
+    return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt","decrypt"]);
+}
+
+async function encrypt(text){
+    const key = await getKey();
+    const iv  = crypto.getRandomValues(new Uint8Array(12));
+    const cipher = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(text));
+    return btoa(JSON.stringify({iv:[...iv], data:[...new Uint8Array(cipher)]}));
+}
+
+async function decrypt(b64){
+    const {iv,data} = JSON.parse(atob(b64));
+    const key = await getKey();
+    const plain = await crypto.subtle.decrypt(
+        {name:"AES-GCM", iv:new Uint8Array(iv)},
+        key,
+        new Uint8Array(data)
+    );
+    return dec.decode(plain);
+}
+
+// ======== APP LOGIC ========
+const t = document.getElementById('t');
+
+(async()=>{
+    const stored = localStorage.getItem("content");
+    if(stored){
+        try{ t.value = await decrypt(stored); }
+        catch(e){ t.value = ""; }
+    }
+    t.focus();
+})();
+
+t.oninput = async()=>{
+    localStorage.setItem("content", await encrypt(t.value));
+};
+
+t.addEventListener('keydown', e=>{
+    if(e.key==="Tab"){
         e.preventDefault();
-        const p = t.selectionStart;
+        const p=t.selectionStart;
         t.setRangeText("    ");
-        t.selectionStart = t.selectionEnd = p + 2;
-        localStorage.setItem('content', t.value);
+        t.selectionStart=t.selectionEnd=p+4;
+        localStorage.setItem("content", localStorage.getItem("content"));
     }
 });
 </script>
