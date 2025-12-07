@@ -8,10 +8,7 @@ textarea::-webkit-scrollbar{display:none;}
 <body>
 <textarea id="t" spellcheck="false"></textarea>
 <script>
-// ======== AUTO-KEY AES-GCM ENCRYPTION (NO PASSWORD) ========
 const enc = new TextEncoder(), dec = new TextDecoder();
-
-// Generate or restore a permanent random key
 async function getKey(){
     let raw = localStorage.getItem("autoEncKey");
     if(!raw){
@@ -22,14 +19,12 @@ async function getKey(){
     }
     return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt","decrypt"]);
 }
-
 async function encrypt(text){
     const key = await getKey();
     const iv  = crypto.getRandomValues(new Uint8Array(12));
     const cipher = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(text));
     return btoa(JSON.stringify({iv:[...iv], data:[...new Uint8Array(cipher)]}));
 }
-
 async function decrypt(b64){
     const {iv,data} = JSON.parse(atob(b64));
     const key = await getKey();
@@ -40,10 +35,7 @@ async function decrypt(b64){
     );
     return dec.decode(plain);
 }
-
-// ======== APP LOGIC ========
 const t = document.getElementById('t');
-
 (async()=>{
     const stored = localStorage.getItem("content");
     if(stored){
@@ -52,11 +44,9 @@ const t = document.getElementById('t');
     }
     t.focus();
 })();
-
 t.oninput = async()=>{
     localStorage.setItem("content", await encrypt(t.value));
 };
-
 t.addEventListener('keydown', e=>{
     if(e.key==="Tab"){
         e.preventDefault();
