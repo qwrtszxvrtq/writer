@@ -1,7 +1,7 @@
 <!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 html,body{margin:0;width:100vw;height:100%;background:#000;display:flex;justify-content:center;align-items:center}
-textarea{width:66%;height:70%;background:#000;color:#00ff00;font:6.4px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none}
+textarea{width:33%;height:70%;background:#000;color:#00ff00;font:6.4px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none}
 textarea::-webkit-scrollbar{display:none;}
 </style>
 </head>
@@ -9,7 +9,6 @@ textarea::-webkit-scrollbar{display:none;}
 <textarea id="t" spellcheck="false"></textarea>
 <script>
 const enc = new TextEncoder(), dec = new TextDecoder();
-
 async function getKey(){
     let raw = localStorage.getItem("autoEncKey");
     if(!raw){
@@ -20,14 +19,12 @@ async function getKey(){
     }
     return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt","decrypt"]);
 }
-
 async function encrypt(text){
     const key = await getKey();
     const iv  = crypto.getRandomValues(new Uint8Array(12));
     const cipher = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(text));
     return btoa(JSON.stringify({iv:[...iv], data:[...new Uint8Array(cipher)]}));
 }
-
 async function decrypt(b64){
     const {iv,data} = JSON.parse(atob(b64));
     const key = await getKey();
@@ -38,9 +35,7 @@ async function decrypt(b64){
     );
     return dec.decode(plain);
 }
-
 const t = document.getElementById('t');
-
 (async()=>{
     const stored = localStorage.getItem("content");
     if(stored){
@@ -49,22 +44,9 @@ const t = document.getElementById('t');
     }
     t.focus();
 })();
-
-// ===== Scroll to caret helper =====
-function scrollToCaret(el){
-    const start = el.selectionStart;
-    const lines = el.value.substr(0,start).split("\n").length;
-    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 8;
-    el.scrollTop = lineHeight * (lines - 1);
-}
-
-// ===== Main input handler =====
-t.addEventListener('input', async () => {
+t.oninput = async()=>{
     localStorage.setItem("content", await encrypt(t.value));
-    scrollToCaret(t);
-});
-
-// ===== Tab insertion =====
+};
 t.addEventListener('keydown', e=>{
     if(e.key==="Tab"){
         e.preventDefault();
@@ -74,11 +56,10 @@ t.addEventListener('keydown', e=>{
         localStorage.setItem("content", localStorage.getItem("content"));
     }
 });
-
-// ===== Auto-indent Enter =====
 t.addEventListener('keydown', e => {
     if (e.key === "Enter") {
         e.preventDefault();
+
         const v = t.value;
         const p = t.selectionStart;
         const start = v.lastIndexOf("\n", p - 1) + 1;
@@ -87,14 +68,8 @@ t.addEventListener('keydown', e => {
         const insert = "\n" + indent;
         t.setRangeText(insert, p, p, "end");
         localStorage.setItem("content", t.value);
-        scrollToCaret(t);
     }
 });
-
-// ===== Scroll on caret move (arrows, click, touch) =====
-['keyup','click','touchend'].forEach(ev =>
-    t.addEventListener(ev, ()=>scrollToCaret(t))
-);
 </script>
 </body>
 </html>
