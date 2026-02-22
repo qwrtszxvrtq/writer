@@ -53,7 +53,7 @@ const t = document.getElementById('t');
 // ===== Scroll to caret helper =====
 function scrollToCaret(el){
     const start = el.selectionStart;
-    const lines = el.value.substr(0,start).split("\n").length;
+    const lines = el.value.slice(0, start).split("\n").length;
     const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 8;
     el.scrollTop = lineHeight * (lines - 1);
 }
@@ -65,18 +65,18 @@ t.addEventListener('input', async () => {
 });
 
 // ===== Tab insertion =====
-t.addEventListener('keydown', e=>{
+t.addEventListener('keydown', async e=>{
     if(e.key==="Tab"){
         e.preventDefault();
         const p=t.selectionStart;
         t.setRangeText("    ");
         t.selectionStart=t.selectionEnd=p+4;
-        localStorage.setItem("content", localStorage.getItem("content"));
+        localStorage.setItem("content", await encrypt(t.value));
     }
 });
 
 // ===== Auto-indent Enter =====
-t.addEventListener('keydown', e => {
+t.addEventListener('keydown', async e => {
     if (e.key === "Enter") {
         e.preventDefault();
         const v = t.value;
@@ -86,7 +86,7 @@ t.addEventListener('keydown', e => {
         const indent = indentMatch ? indentMatch[0] : "";
         const insert = "\n" + indent;
         t.setRangeText(insert, p, p, "end");
-        localStorage.setItem("content", t.value);
+        localStorage.setItem("content", await encrypt(t.value));
         scrollToCaret(t);
     }
 });
