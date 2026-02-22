@@ -1,102 +1,213 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;width:100%;min-height:100vh;height:100%;background:#000;display:flex;justify-content:center;align-items:center;overflow:auto}
-textarea{width:min(var(--editor-width,66%), calc(100vw - 2rem));max-width:100%;height:min(70%, calc(100vh - 2rem));min-height:4rem;background:#000;color:#00ff00;font:6.4px monospace;border:0;outline:0;resize:none;caret-color:#00ff00;scrollbar-width:none;-webkit-tap-highlight-color:transparent;padding:0.25rem}
-textarea::-webkit-scrollbar{display:none}
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    *, *::before, *::after {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      min-height: 100vh;
+      height: 100%;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: auto;
+    }
+
+    textarea {
+      /* Fallbacks for older browsers (HTML4-era, old IE) */
+      width: 66%;
+      max-width: 100%;
+      height: 70%;
+      min-height: 4rem;
+      /* Modern: responsive within viewport */
+      width: min(var(--editor-width, 66%), calc(100vw - 2rem));
+      height: min(70%, calc(100vh - 2rem));
+      background: #000;
+      color: #00ff00;
+      font: 6.4px monospace;
+      border: 0;
+      outline: 0;
+      resize: none;
+      caret-color: #00ff00;
+      scrollbar-width: none;
+      -webkit-tap-highlight-color: transparent;
+      padding: 0.25rem;
+    }
+
+    textarea::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-<textarea id="t" spellcheck="false"></textarea>
-<script>
-const enc = new TextEncoder(), dec = new TextDecoder();
+  <textarea id="t" spellcheck="false"></textarea>
+  <script>
+    (function () {
+      var el = document.getElementById("t");
+      if (!el) return;
 
-async function getKey(){
-    let raw = localStorage.getItem("autoEncKey");
-    if(!raw){
-        raw = crypto.getRandomValues(new Uint8Array(32));
-        localStorage.setItem("autoEncKey", btoa(String.fromCharCode(...raw)));
-    } else {
-        raw = Uint8Array.from(atob(raw), c=>c.charCodeAt(0));
-    }
-    return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt","decrypt"]);
-}
+      var KEY_STORAGE = "content";
+      var KEY_CRYPTO = "autoEncKey";
+      var KEY_TAB = 9;
+      var KEY_ENTER = 13;
 
-async function encrypt(text){
-    const key = await getKey();
-    const iv  = crypto.getRandomValues(new Uint8Array(12));
-    const cipher = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(text));
-    return btoa(JSON.stringify({iv:[...iv], data:[...new Uint8Array(cipher)]}));
-}
+      function safeGet(key) {
+        try { return localStorage.getItem(key); } catch (e) { return null; }
+      }
+      function safeSet(key, value) {
+        try { localStorage.setItem(key, value); } catch (e) {}
+      }
 
-async function decrypt(b64){
-    const {iv,data} = JSON.parse(atob(b64));
-    const key = await getKey();
-    const plain = await crypto.subtle.decrypt(
-        {name:"AES-GCM", iv:new Uint8Array(iv)},
-        key,
-        new Uint8Array(data)
-    );
-    return dec.decode(plain);
-}
+      function scrollToCaret(elm) {
+        var pos = elm.selectionStart;
+        var lineCount = elm.value.slice(0, pos).split("\n").length;
+        var lineHeight = parseFloat(window.getComputedStyle ? getComputedStyle(elm).lineHeight : 8) || 8;
+        elm.scrollTop = lineHeight * (lineCount - 1);
+      }
 
-const t = document.getElementById('t');
+      function getIndentAt(text, pos) {
+        var lineStart = text.lastIndexOf("\n", pos - 1) + 1;
+        var m = text.slice(lineStart, pos).match(/^[ ]*/);
+        return m ? m[0] : "";
+      }
 
-(async()=>{
-    const stored = localStorage.getItem("content");
-    if(stored){
-        try{ t.value = await decrypt(stored); }
-        catch(e){ t.value = ""; }
-    }
-    t.focus();
-})();
+      function applyTab(elm) {
+        var p = elm.selectionStart;
+        elm.setRangeText("    ", p, p, "end");
+        elm.selectionStart = elm.selectionEnd = p + 4;
+      }
 
-// ===== Scroll to caret helper (x1) =====
-function scrollToCaret(el){
-    const start = el.selectionStart;
-    const lines = el.value.slice(0, start).split("\n").length;
-    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 8;
-    el.scrollTop = lineHeight * (lines - 1);
-}
+      function applyEnter(elm) {
+        var v = elm.value;
+        var pos = elm.selectionStart;
+        var indent = getIndentAt(v, pos);
+        elm.setRangeText("\n" + indent, pos, pos, "end");
+      }
 
-// ===== Main input: encrypt + scroll (x1) =====
-t.addEventListener('input', async () => {
-    localStorage.setItem("content", await encrypt(t.value));
-    scrollToCaret(t);
-});
+      function stopEvent(e) {
+        e = e || window.event;
+        if (e.preventDefault) e.preventDefault();
+      }
+      function isKey(e, code) {
+        return e.keyCode === code || (code === KEY_TAB && e.key === "Tab") || (code === KEY_ENTER && e.key === "Enter");
+      }
 
-// ===== Tab insertion (both; encrypt after insert) =====
-t.addEventListener('keydown', async e=>{
-    if(e.key==="Tab"){
-        e.preventDefault();
-        const p=t.selectionStart;
-        t.setRangeText("    ");
-        t.selectionStart=t.selectionEnd=p+4;
-        localStorage.setItem("content", await encrypt(t.value));
-    }
-});
+      var hasCrypto = typeof crypto !== "undefined" && crypto.subtle && typeof TextEncoder !== "undefined";
 
-// ===== Auto-indent Enter + scroll (x1) =====
-t.addEventListener('keydown', async e => {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        const v = t.value;
-        const p = t.selectionStart;
-        const start = v.lastIndexOf("\n", p - 1) + 1;
-        const indentMatch = v.slice(start, p).match(/^[ ]*/);
-        const indent = indentMatch ? indentMatch[0] : "";
-        const insert = "\n" + indent;
-        t.setRangeText(insert, p, p, "end");
-        localStorage.setItem("content", await encrypt(t.value));
-        scrollToCaret(t);
-    }
-});
+      if (!hasCrypto) {
+        el.value = safeGet(KEY_STORAGE) || "";
+        el.focus();
+        el.oninput = function () {
+          safeSet(KEY_STORAGE, el.value);
+          scrollToCaret(el);
+        };
+        el.onkeydown = function (e) {
+          e = e || window.event;
+          if (isKey(e, KEY_TAB)) {
+            stopEvent(e);
+            applyTab(el);
+            safeSet(KEY_STORAGE, el.value);
+          } else if (isKey(e, KEY_ENTER)) {
+            stopEvent(e);
+            applyEnter(el);
+            safeSet(KEY_STORAGE, el.value);
+            scrollToCaret(el);
+          }
+        };
+        ["keyup", "click", "touchend"].forEach(function (ev) {
+          el.addEventListener(ev, function () { scrollToCaret(el); });
+        });
+        return;
+      }
 
-// ===== Scroll on caret move: arrows, click, touch (x1) =====
-['keyup','click','touchend'].forEach(ev =>
-    t.addEventListener(ev, ()=>scrollToCaret(t))
-);
-</script>
+      var enc = new TextEncoder();
+      var dec = new TextDecoder();
+
+      var keyPromise = null;
+      function getKey() {
+        if (keyPromise) return keyPromise;
+        var raw = safeGet(KEY_CRYPTO);
+        if (!raw) {
+          raw = crypto.getRandomValues(new Uint8Array(32));
+          safeSet(KEY_CRYPTO, btoa(String.fromCharCode.apply(null, raw)));
+        } else {
+          raw = Uint8Array.from(atob(raw), function (c) { return c.charCodeAt(0); });
+        }
+        keyPromise = crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+        return keyPromise;
+      }
+
+      function encrypt(text) {
+        return getKey().then(function (key) {
+          var iv = crypto.getRandomValues(new Uint8Array(12));
+          return crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            key,
+            enc.encode(text)
+          ).then(function (cipher) {
+            return btoa(JSON.stringify({ iv: Array.from(iv), data: Array.from(new Uint8Array(cipher)) }));
+          });
+        });
+      }
+
+      function decrypt(b64) {
+        var payload = JSON.parse(atob(b64));
+        var iv = new Uint8Array(payload.iv);
+        var data = new Uint8Array(payload.data);
+        return getKey().then(function (key) {
+          return crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, data);
+        }).then(function (plain) {
+          return dec.decode(plain);
+        });
+      }
+
+      function persistContent() {
+        encrypt(el.value).then(function (cipher) {
+          safeSet(KEY_STORAGE, cipher);
+        });
+      }
+
+      var stored = safeGet(KEY_STORAGE);
+      if (!stored) {
+        el.value = "";
+        el.focus();
+      } else {
+        decrypt(stored).then(function (text) { el.value = text; }).catch(function () { el.value = ""; }).then(function () { el.focus(); });
+      }
+
+      el.addEventListener("input", function () {
+        persistContent();
+        scrollToCaret(el);
+      });
+
+      el.addEventListener("keydown", function (e) {
+        e = e || window.event;
+        if (isKey(e, KEY_TAB)) {
+          stopEvent(e);
+          applyTab(el);
+          persistContent();
+        } else if (isKey(e, KEY_ENTER)) {
+          stopEvent(e);
+          applyEnter(el);
+          persistContent();
+          scrollToCaret(el);
+        }
+      });
+
+      ["keyup", "click", "touchend"].forEach(function (ev) {
+        el.addEventListener(ev, function () { scrollToCaret(el); });
+      });
+    })();
+  </script>
 </body>
 </html>
