@@ -1,0 +1,7 @@
+# Cursor IDE user-specific settings (local machine, do not version control)
+**/Cursor/User/settings.json
+**/Application Support/Cursor/User/
+*.cursor-user*
+
+# Common editor/IDE local config that may be copied by mistake
+.vscode/settings.json.user
