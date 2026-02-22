@@ -1,0 +1,50 @@
+/* Default: wide editor. Override with --editor-width in :root or a second stylesheet. */
+:root {
+  --editor-width: 66%;
+}
+
+*,
+*::before,
+*::after {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  min-height: 100vh;
+  height: 100%;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+}
+
+textarea {
+  /* Fallbacks for older browsers (HTML4-era, old IE) */
+  width: 66%;
+  max-width: 100%;
+  height: 70%;
+  min-height: 4rem;
+  /* Modern: responsive within viewport */
+  width: min(var(--editor-width, 66%), calc(100vw - 2rem));
+  height: min(70%, calc(100vh - 2rem));
+  background: #000;
+  color: #00ff00;
+  font: 6.4px monospace;
+  border: 0;
+  outline: 0;
+  resize: none;
+  caret-color: #00ff00;
+  scrollbar-width: none;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0.25rem;
+}
+
+textarea::-webkit-scrollbar {
+  display: none;
+}
