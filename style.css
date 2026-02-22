@@ -1,4 +1,4 @@
-/* Default: wide editor. Override with --editor-width in :root or a second stylesheet. */
+/* Single stylesheet. Override --editor-width in :root (e.g. 33%) for narrow layout. */
 :root {
   --editor-width: 66%;
 }
