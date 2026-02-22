@@ -5,7 +5,7 @@ Each row is one logical point. Use the hash to inspect, revert, or cherry-pick.
 | Topic | Hash | Message |
 |-------|------|---------|
 | Styles moved to external CSS | `0db9ea1` | chore: move styles to style.css |
-| Single page + stylesheet (x2/style-x2 removed) | (this commit) | chore: suppress x2.html, style-x2.css; keep x.html, style.css |
+| Single page + stylesheet (x2/style-x2 removed) | `e421832` | chore: suppress x2.html, style-x2.css; keep x.html, style.css |
 | JS readability + faster logic | `15f4e30` | refactor(js): readability and faster logic |
 | Responsive layout | `82f3ab3` | Responsive layout: viewport meta, fluid width/height |
 | Encrypt on Tab/Enter, slice not substr | `cd63aba` | fix: persist encrypted content on Tab/Enter |
